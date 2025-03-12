@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NotepadZ++</title>
+    <!-- Pure CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Prism.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css" />
+    <!-- Brython -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.12.3/brython.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.12.3/brython_stdlib.js"></script>
+    <style>
+        /* ... (CSS เหมือนเดิม) ... */
+        :root {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252526;
+            --text-primary: #d4d4d4;
+            --text-secondary: #9cdcfe; /* สีสำหรับ keywords, ... */
+            --accent-color: #0078e7;
+            --sidebar-width: 60px; /* เหมือนเดิม */
+            --tab-height: 35px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            padding: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+
+        .logo {
+            color: var(--accent-color);
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding: 0 1rem;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-secondary);
+            display: flex;
+            flex-direction: column;
+            padding: 1rem 0;
+            border-right: 1px solid #333;
+        }
+
+        .sidebar-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            padding: 0.5rem;
+            margin: 0.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* File Tree Styles */
+        .file-tree {
+            list-style: none;
+            padding-left: 1rem; /* Indent */
+        }
+
+        .file-tree li {
+            padding: 0.2rem 0;
+            cursor: pointer;
+        }
+
+        .file-tree .file-icon {
+            margin-right: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        .file-tree li:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .editor-wrapper {
+            display: flex;
+            flex: 1;
+        }
+
+        .editor {
+            flex: 3;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Fira Code', monospace;
+            padding: 1rem;
+            outline: none;
+            resize: none;
+            border: none;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre;
+        }
+
+        .output {
+            flex: 1;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border: none;
+            padding: 1rem;
+            font-family: 'Fira Code', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: none;
+            white-space: pre;
+            overflow: auto;
+        }
+
+        .status-bar {
+            background: var(--bg-secondary);
+            padding: 0.3rem 1rem;
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid #333;
+        }
+
+        .custom-button {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid #444;
+            padding: 0.5rem 1rem;
+            margin: 0 0.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .custom-button:hover {
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .tabs {
+            background: var(--bg-secondary);
+            padding: 0.5rem 1rem 0;
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            border-bottom: 1px solid #333; /* Add border */
+            height: var(--tab-height); /* Set height */
+        }
+
+        .tab {
+            padding: 0.5rem 1rem;
+            background: var(--bg-primary);
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+            white-space: nowrap;
+            display: flex; /* For close button */
+            align-items: center; /* Center vertically */
+            height: 100%; /* Fill tab container */
+        }
+
+        .tab.active {
+            border-top: 2px solid var(--accent-color);
+        }
+
+        .tab-close {
+            margin-left: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .tab-close:hover {
+            color: var(--text-primary);
+        }
+
+        /* Prism.js styles (Okaidia theme) */
+        pre[class*="language-"] {
+            padding: 1em;
+            margin: .5em 0;
+            overflow: auto;
+            border-radius: 0.3em;
+            background: #272822;
+        }
+
+        :not(pre) > code[class*="language-"],
+        pre[class*="language-"] {
+            background: #272822;
+        }
+
+        .token.comment,
+        .token.prolog,
+        .token.doctype,
+        .token.cdata {
+            color: #8292a2;
+        }
+
+        .token.punctuation {
+            color: #f8f8f2;
+        }
+
+        .token.namespace {
+            opacity: .7;
+        }
+
+        .token.property,
+        .token.tag,
+        .token.constant,
+        .token.symbol,
+        .token.deleted {
+            color: #f92672;
+        }
+
+        .token.boolean,
+        .token.number {
+            color: #ae81ff;
+        }
+
+        .token.selector,
+        .token.attr-name,
+        .token.string,
+        .token.char,
+        .token.builtin,
+        .token.inserted {
+            color: #a6e22e;
+        }
+
+        .token.operator,
+        .token.entity,
+        .token.url,
+        .language-css .token.string,
+        .style .token.string,
+        .token.variable {
+            color: #f8f8f2;
+        }
+
+        .token.atrule,
+        .token.attr-value,
+        .token.function,
+        .token.class-name {
+            color: #e6db74;
+        }
+
+        .token.keyword {
+            color: #66d9ef;
+        }
+
+        .token.regex,
+        .token.important {
+            color: #fd971f;
+        }
+
+        .token.important,
+        .token.bold {
+            font-weight: bold;
+        }
+
+        .token.italic {
+            font-style: italic;
+        }
+
+        .token.entity {
+            cursor: help;
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .status-item {
+            margin-right: 1rem;
+        }
+
+        .status-icon {
+            margin-right: 0.3rem;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 50px;
+            }
+            .custom-button span {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body onload="brython();">
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">NotepadZ++</div>
+        <div class="actions">
+            <button class="custom-button" id="new-file">
+                <i class="fas fa-file"></i>
+                <span>New</span>
+            </button>
+            <button class="custom-button" id="open-file">
+                <i class="fas fa-folder-open"></i>
+                <span>Open</span>
+            </button>
+            <button class="custom-button" id="save-file">
+                <i class="fas fa-save"></i>
+                <span>Save</span>
+            </button>
+            <button class="custom-button" id="delete-file">
+                <i class="fas fa-trash"></i>
+                <span>Delete</span>
+            </button>
+            <button class="custom-button" id="theme-switcher">
+                <i class="fas fa-adjust"></i>
+                <span>Theme</span>
+            </button>
+            <!-- Run Button -->
+            <button class="custom-button" id="run-code">
+                <i class="fas fa-play"></i>
+                <span>Run</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <button class="sidebar-btn" title="Files">
+                <i class="fas fa-file-code fa-lg"></i>
+            </button>
+            <button class="sidebar-btn" title="Search">
+                <i class="fas fa-search fa-lg"></i>
+            </button>
+            <button class="sidebar-btn" title="Extensions">
+                <i class="fas fa-puzzle-piece fa-lg"></i>
+            </button>
+            <!-- File Tree -->
+            <ul class="file-tree" id="file-tree">
+                <!-- File tree will be generated here -->
+            </ul>
+        </aside>
+
+        <!-- Editor Container -->
+        <div class="editor-container">
+            <!-- Tabs -->
+            <div class="tabs" id="tabs">
+                <!-- Tabs will be generated here -->
+            </div>
+
+            <!-- Editor and Output -->
+            <div class="editor-wrapper">
+                <div class="editor" contenteditable="true" spellcheck="false" id="editor"></div>
+                <textarea class="output" id="output" readonly></textarea>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div class="status-left" id="status-left">
+                    <span class="status-item" id="line-col">Line 1, Col 1</span>
+                    <span class="status-item" id="file-encoding">UTF-8</span>
+                    <span class="status-item" id="file-type">Plain Text</span>
+                </div>
+                <div class="status-right" id="status-right">
+                    <!-- อาจจะแสดง errors/warnings ตรงนี้ -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prism.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-c.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <!-- Brython -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.12.3/brython.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.12.3/brython_stdlib.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const editor = document.getElementById('editor');
+            const output = document.getElementById('output');
+            const statusLeft = document.getElementById('status-left');
+            const tabsContainer = document.getElementById('tabs');
+            const fileTree = document.getElementById('file-tree');
+            const newFileButton = document.getElementById('new-file');
+            const openFileButton = document.getElementById('open-file');
+            const saveFileButton = document.getElementById('save-file');
+            const deleteFileButton = document.getElementById('delete-file');
+            const themeSwitcherButton = document.getElementById('theme-switcher');
+            const runCodeButton = document.getElementById('run-code');
+
+            let files = JSON.parse(localStorage.getItem('files')) || [];
+            let currentFileId = null;
+
+            // --- File Tree ---
+
+            function renderFileTree() {
+                fileTree.innerHTML = ''; // Clear existing tree
+
+                function createTreeItem(file) {
+                    const li = document.createElement('li');
+                    const icon = document.createElement('i');
+                    icon.classList.add('fas', 'file-icon');
+                    if (file.type === 'folder') {
+                        icon.classList.add('fa-folder');
+                    } else {
+                        icon.classList.add('fa-file-alt');
+                    }
+                    li.appendChild(icon);
+                    li.appendChild(document.createTextNode(file.name));
+
+                    li.addEventListener('click', () => {
+                        if (file.type === 'file') {
+                            switchFile(file.id);
+                        }
+                    });
+
+                    if (file.type === 'folder' && file.children) {
+                        const ul = document.createElement('ul');
+                        file.children.forEach(child => {
+                            ul.appendChild(createTreeItem(child));
+                        });
+                        li.appendChild(ul);
+                    }
+
+                    return li;
+                }
+
+                files.forEach(file => {
+                    fileTree.appendChild(createTreeItem(file));
+                });
+            }
+
+            // --- Tabs ---
+
+            function addTab(fileId, fileName) {
+                const tab = document.createElement('button');
+                tab.className = 'tab';
+                tab.textContent = fileName;
+                tab.dataset.id = fileId;
+
+                const closeBtn = document.createElement('span');
+                closeBtn.className = 'tab-close';
+                closeBtn.innerHTML = '×'; // "x" symbol
+                closeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent tab switch
+                    closeTab(fileId);
+                });
+
+                tab.appendChild(closeBtn);
+                tab.addEventListener('click', () => switchFile(fileId));
+                tabsContainer.appendChild(tab);
+            }
+
+            function closeTab(fileId) {
+                // Find the file and remove it from the files array
+                files = files.filter(f => f.id !== fileId);
+                localStorage.setItem('files', JSON.stringify(files));
+
+                // Remove the tab element
+                const tab = document.querySelector(`.tab[data-id="${fileId}"]`);
+                if (tab) {
+                    tab.remove();
+                }
+
+                // If the closed tab was the current file, switch to another tab
+                if (currentFileId === fileId) {
+                    currentFileId = null;
+                    editor.innerText = ''; // Clear the editor
+
+                    if (files.length > 0) {
+                        // Switch to the first available tab
+                        switchFile(files[0].id);
+                    }
+                }
+            }
+
+            function switchFile(fileId) {
+                const file = files.find(f => f.id === fileId);
+                if (file) {
+                    editor.innerText = file.content;
+                    currentFileId = fileId;
+                    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+                    const tabElement = document.querySelector(`.tab[data-id="${fileId}"]`);
+                    if (tabElement) {
+                        tabElement.classList.add('active');
+                    }
+
+                    // Update status bar
+                    updateStatus();
+                    updateFileType(file.name); // Update file type in status bar
+                }
+            }
+
+            // --- File Operations ---
+
+            function createNewFile() {
+                const fileName = prompt("Enter new file name:", "untitled.txt"); // Ask for file name
+                if (fileName) {
+                    const fileId = Date.now().toString(); // Generate unique ID
+                    const newFile = {
+                        id: fileId,
+                        name: fileName,
+                        type: 'file',
+                        content: ''
+                    };
+                    files.push(newFile); // Add to files array
+                    localStorage.setItem('files', JSON.stringify(files)); // Save to localStorage
+                    addTab(fileId, fileName); // Create a new tab
+                    switchFile(fileId); // Switch to the new file
+                }
+            }
+
+            function openFile() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.txt,.js,.html,.css,.c,.cpp,.java,.py'; // Accept text files
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const fileId = Date.now().toString();
+                            const newFile = {
+                                id: fileId,
+                                name: file.name,
+                                type: 'file',
+                                content: e.target.result
+                            };
+                            files.push(newFile);
+                            localStorage.setItem('files', JSON.stringify(files));
+                            addTab(fileId, file.name);
+                            switchFile(fileId);
+                        };
+                        reader.readAsText(file);
+                    }
+                };
+                input.click();
+            }
+
+            function saveFile() {
+                if (currentFileId) {
+                    const file = files.find(f => f.id === currentFileId);
+                    if (file) {
+                        // Ask for filename (using SweetAlert2)
+                        Swal.fire({
+                            title: 'Save File As',
+                            input: 'text',
+                            inputValue: file.name,
+                            showCancelButton: true,
+                            confirmButtonText: 'Save',
+                            preConfirm: (filename) => {
+                                if (!filename) {
+                                    Swal.showValidationMessage('Please enter a file name');
+                                    return false;
+                                }
+                                return filename;
+                            }
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                const filename = result.value;
+                                file.content = editor.innerText;
+                                file.name = filename;
+                                localStorage.setItem('files', JSON.stringify(files));
+
+                                downloadFile(filename, file.content);
+
+                                // Update tab name (if it exists)
+                                const tab = document.querySelector(`.tab[data-id="${currentFileId}"]`);
+                                if (tab) {
+                                    tab.textContent = filename;
+                                    // Remove the close button text, keep only the icon
+                                    const closeBtn = tab.querySelector('.tab-close');
+                                    if (closeBtn) {
+                                        tab.textContent = ''; // Clear existing text
+                                        tab.appendChild(closeBtn); // Re-add the close button
+                                        tab.prepend(filename)
+                                    }
+                                }
+
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'File saved successfully!',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+
+            function downloadFile(filename, content) {
+                const element = document.createElement('a');
+                element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
+                element.setAttribute('download', filename);
+
+                element.style.display = 'none';
+                document.body.appendChild(element);
+
+                element.click();
+
+                document.body.removeChild(element);
+            }
+
+            // --- Status Bar ---
+
+            function updateStatus() {
+                let text = editor.innerText;
+                let caretPos = getCaretPosition(editor);
+                let lines = text.substring(0, caretPos).split("\n");
+                let lineNum = lines.length;
+                let colNum = lines[lineNum - 1].length + 1;
+                const lineCol = document.getElementById('line-col');
+                if (lineCol) {
+                  lineCol.textContent = `Line ${lineNum}, Col ${colNum}`;
+                }
+            }
+
+            function updateFileType(filename) {
+                const fileTypeSpan = document.getElementById('file-type');
+                if (fileTypeSpan) {
+                    let fileType = 'Plain Text'; // Default
+                    if (filename.endsWith('.js')) {
+                        fileType = 'JavaScript';
+                    } else if (filename.endsWith('.html')) {
+                        fileType = 'HTML';
+                    } else if (filename.endsWith('.css')) {
+                        fileType = 'CSS';
+                    } else if (filename.endsWith('.c')) {
+                        fileType = 'C';
+                    } else if (filename.endsWith('.cpp')) {
+                        fileType = 'C++';
+                    } else if (filename.endsWith('.java')) {
+                        fileType = 'Java';
+                    } else if (filename.endsWith('.py')) {
+                        fileType = 'Python';
+                    }
+                    fileTypeSpan.textContent = fileType;
+                }
+            }
+
+            // Get caret position (cross-browser)
+            function getCaretPosition(editableDiv) {
+                let caretPos = 0,
+                    sel, range;
+                if (window.getSelection) {
+                    sel = window.getSelection();
+                    if (sel.rangeCount) {
+                        range = sel.getRangeAt(0);
+                        if (range.commonAncestorContainer.parentNode == editableDiv) {
+                            caretPos = range.endOffset;
+                        }
+                    }
+                } else if (document.selection && document.selection.createRange) {
+                    range = document.selection.createRange();
+                    if (range.parentElement() == editableDiv) {
+                        let tempEl = document.createElement("span");
+                        editableDiv.insertBefore(tempEl, editableDiv.firstChild);
+                        let tempRange = range.duplicate();
+                        tempRange.moveToElementText(tempEl);
+                        tempRange.setEndPoint("EndToEnd", range);
+                        caretPos = tempRange.text.length;
+                    }
+                }
+                return caretPos;
+            }
+
+            // --- Theme Switcher ---
+
+            const themes = {
+                dark: {
+                    '--bg-primary': '#1e1e1e',
+                    '--bg-secondary': '#252526',
+                    '--text-primary': '#d4d4d4'
+                },
+                light: {
+                    '--bg-primary': '#ffffff',
+                    '--bg-secondary': '#f3f3f3',
+                    '--text-primary': '#000000'
+                }
+            };
+
+            let currentTheme = 'dark';
+            themeSwitcherButton.addEventListener('click', () => {
+                currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                setTheme(currentTheme);
+                Swal.fire({
+                    icon: 'success',
+                    title: `Theme changed to ${currentTheme} mode!`,
+                    showConfirmButton: false,
+                    timer: 1500
+                });
+            });
+
+            function setTheme(themeName) {
+                const root = document.documentElement;
+                for (const [property, value] of Object.entries(themes[themeName])) {
+                    root.style.setProperty(property, value);
+                }
+            }
+
+            // --- Run Code (JavaScript and Python) ---
+
+            function runCode() {
+                const code = editor.innerText;
+                const fileType = document.getElementById('file-type').innerText;
+
+                if (fileType === 'JavaScript') {
+                    try {
+                        // Clear previous output
+                        output.textContent = '';
+
+                        // Redirect console.log to output
+                        const originalConsoleLog = console.log;
+                        console.log = (...args) => {
+                            output.textContent += args.join(' ') + '\n';
+                            originalConsoleLog.apply(console, args);
+                        };
+
+                        eval(code); // Run JavaScript code
+
+                        // Restore console.log
+                        console.log = originalConsoleLog;
+                    } catch (error) {
+                        output.textContent = 'Error: ' + error.message;
+                    }
+                } else if (fileType === 'Python') {
+                    try {
+                        output.textContent = ''; // Clear output
+
+                        // Brython requires a <script type="text/python"> tag
+                        const script = document.createElement('script');
+                        script.type = 'text/python';
+                        script.textContent = code;
+                        document.body.appendChild(script);
+
+                        // Initialize Brython and run the script
+                        brython();
+
+                         // Clean up: Remove the script tag
+                        document.body.removeChild(script);
+
+                    } catch (error) {
+                        output.textContent = 'Error: ' + error.message;
+                    }
+                } else {
+                    output.textContent = 'Run is only supported for JavaScript and Python files.';
+                }
+            }
+
+            // --- Event Listeners ---
+
+            newFileButton.addEventListener('click', createNewFile);
+            openFileButton.addEventListener('click', openFile);
+            saveFileButton.addEventListener('click', saveFile);
+            runCodeButton.addEventListener('click', runCode);
+
+            // Event listeners for status bar update
+            editor.addEventListener('input', updateStatus);
+            editor.addEventListener('click', updateStatus);
+            editor.addEventListener('keyup', updateStatus); // For arrow keys
+
+            // --- Initialization ---
+
+            renderFileTree();
+            updateStatus();
+
+            // Load files from localStorage and open the first one
+            if (files.length > 0) {
+                files.forEach(file => {
+                    addTab(file.id, file.name);
+                });
+                switchFile(files[0].id); // Open the first file
+            }
+        });
+    </script>
+</body>
+</html>
